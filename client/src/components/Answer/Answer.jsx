@@ -5,23 +5,43 @@ import { axiosInstance, endPoint } from "../../endPoint/api";
 import Cookies from "js-cookie";
 import { useNavigate, useParams } from "react-router-dom";
 import { LiaUserCircleSolid } from "react-icons/lia";
-import "./Answer.css"
+import "./Answer.css";
 import FooterComp from "../../components/Footer/FooterComp";
+
 const Answer = () => {
   const { questionId } = useParams();
   console.log(questionId);
 
   const { state } = useContext(AuthContext);
-  const [fetchedAnswer, setFetchedAnswer] = useState("");
+  const [fetchedAnswer, setFetchedAnswer] = useState([]);
   const [question, setQuestion] = useState({});
   const [answerText, setAnswerText] = useState("");
   const navigate = useNavigate();
 
-  useEffect(() => {
+  const getAnswers = async () => {
     const token = Cookies.get("token");
-    console.log(token, "token");
 
+    try {
+      const response = await axiosInstance.get(
+        `${endPoint.QUESTIONS}/${questionId}/answers`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      setFetchedAnswer(response.data.answers);
+    } catch (error) {
+      console.log("Error fetching answers:", error);
+      setFetchedAnswer([]);
+    }
+  };
+
+  useEffect(() => {
     const fetchData = async () => {
+      const token = Cookies.get("token");
+      console.log(token, "token");
+
       if (token) {
         try {
           const response = await axiosInstance.get(
@@ -41,6 +61,7 @@ const Answer = () => {
     };
 
     fetchData();
+    getAnswers();
   }, [questionId]);
 
   const postAnswer = async () => {
@@ -64,57 +85,44 @@ const Answer = () => {
       console.log("Error posting answer:", error);
     }
   };
-  const getAnswers = async () => {
-    const token = Cookies.get("token");
-
-    try {
-      const response = await axiosInstance.get(
-        `${endPoint.QUESTIONS}/${questionId}/answers`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      // console.log(response.data.answers[0].answer);
-      // const finalAnswer = response.data.answers[0].answer;
-      setFetchedAnswer(response.data.answers[0].answer);
-      // console.log(finalAnswer)// This should contain the fetched answers
-      // Further handling of the fetched answers...
-    } catch (error) {
-      console.log("Error fetching answers:", error);
-    }
-  };
-
-  getAnswers();
 
   const handleAnswer = async (e) => {
     e.preventDefault();
-    await postAnswer(); // Call postAnswer function to submit the answer
+    await postAnswer();
   };
 
   return (
     <section>
-      <div className=" mb-7 custom-div">
+      <div className="mb-7 custom-div">
         <Header />
         <h3>Question</h3>
 
-        {/* Display the Question */}
         <h5>{question?.question}</h5>
         <p>{question?.questionDescription}</p>
         <hr />
         <h3>Answers from the Commmunity</h3>
         <hr />
+
         <>
           <div className="user">
             <LiaUserCircleSolid />
           </div>
-
           <p>{question?.firstname}</p>
-          <p>{fetchedAnswer}</p>
+          <ul>
+            {fetchedAnswer.map((item) => (
+              <li key={item.id}>
+                <b>
+                  <div className="user">
+                    <LiaUserCircleSolid />
+                  </div>
+                  {item.firstname}:
+                </b>
+                <br />
+                <p>{item.answer}</p>
+              </li>
+            ))}
+          </ul>
         </>
-
-        <ans></ans>
 
         <form onSubmit={handleAnswer}>
           <div className="mb-3">
@@ -132,7 +140,7 @@ const Answer = () => {
           </button>
         </form>
       </div>
-      <FooterComp></FooterComp>
+      <FooterComp />
     </section>
   );
 };
